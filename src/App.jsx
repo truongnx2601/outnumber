@@ -5,6 +5,8 @@ export default function App() {
   const [portServer, setPortServer] = useState("");
   const [serviceID, setServiceID] = useState("");
   const [isBtech, setIsBtech] = useState(false);
+  const [stackID, setStackID] = useState("0");
+  
 
   const makeBatContent = (payload) => {
     // JSON body as string, escape double quotes for use inside bat -d "..."
@@ -29,14 +31,14 @@ export default function App() {
 
   const handleDownloadBat = (e) => {
     e.preventDefault();
-
+    const finalStackID = isBtech ? stackID : "1";
     const payload = {
       isBtech,
       ipServer,
       portServer: Number(portServer || 0),
       serviceName: "vnvc1",
       serviceID,
-      stackID: "1",
+      stackID: finalStackID,
     };
 
     const batContent = makeBatContent(payload);
