@@ -46,7 +46,7 @@ export default function App() {
     const a = document.createElement("a");
     a.href = url;
     // filename can include timestamp or serviceID
-    const fileName = `config_outnumber.bat`;
+    const fileName = `config_outnumber_${Date.now()}.bat`;
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
