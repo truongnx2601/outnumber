@@ -1,86 +1,82 @@
 import { useState } from "react";
 
 export default function App() {
-  const [form, setForm] = useState({
-    ipServer: "",
-    portServer: "",
-    serviceID: "",
-    serviceName: "vnvc1",
-    stackID: "1",
-    isBtech: false,
-  });
+  const [ipServer, setIpServer] = useState("");
+  const [portServer, setPortServer] = useState("");
+  const [serviceID, setServiceID] = useState("");
+  const [isBtech, setIsBtech] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+  const makeBatContent = (payload) => {
+    // JSON body as string, escape double quotes for use inside bat -d "..."
+    const jsonString = JSON.stringify(payload);
+    const escapedJson = jsonString.replace(/"/g, '\\"');
+
+    // Build bat content (Windows cmd), using ^ for line continuation
+    const bat = [
+      "@echo off",
+      'curl -s -X POST "http://localhost:9004/api/OutputNumber/configurations" ^',
+      '  -H "Content-Type: application/json" ^',
+      `  -d "${escapedJson}" ^`,
+      '  -w "\\nTimestamp: %date% %time% --- Status Code: %{http_code}\\n"',
+      '',
+      "echo.",
+      "echo Request finished. Press any key to close...",
+      "pause"
+    ].join("\r\n");
+
+    return bat;
   };
 
-  const handleSubmit = async (e) => {
+  const handleDownloadBat = (e) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      alert("Response: " + JSON.stringify(data));
-    } catch (err) {
-      alert("Error: " + err.message);
-    }
+
+    const payload = {
+      isBtech,
+      ipServer,
+      portServer: Number(portServer || 0),
+      serviceName: "vnvc1",
+      serviceID,
+      stackID: "1",
+    };
+
+    const batContent = makeBatContent(payload);
+    const blob = new Blob([batContent], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    // filename can include timestamp or serviceID
+    const fileName = `run-config-${serviceID || "unknown"}-${Date.now()}.bat`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded shadow-md space-y-4 w-96"
-      >
-        <h1 className="text-xl font-bold">Config Outnumber Form</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+      <form className="bg-white p-6 rounded shadow-md space-y-4 w-full max-w-md">
+        <h1 className="text-xl font-bold">API Config Form</h1>
 
-        <input
-          name="ipServer"
-          placeholder="IP Server"
-          value={form.ipServer}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+        <input name="ipServer" placeholder="IP Server" value={ipServer} onChange={(e) => setIpServer(e.target.value)} className="w-full p-2 border rounded" required />
 
-        <input
-          name="portServer"
-          placeholder="Port Server"
-          value={form.portServer}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+        <input name="portServer" placeholder="Port Server" value={portServer} onChange={(e) => setPortServer(e.target.value)} className="w-full p-2 border rounded" required />
 
-        <input
-          name="serviceID"
-          placeholder="Service ID"
-          value={form.serviceID}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
+        <input name="serviceID" placeholder="Service ID" value={serviceID} onChange={(e) => setServiceID(e.target.value)} className="w-full p-2 border rounded" required />
 
         <label className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            name="isBtech"
-            checked={form.isBtech}
-            onChange={handleChange}
-          />
+          <input type="checkbox" checked={isBtech} onChange={(e) => setIsBtech(e.target.checked)} />
           <span>Is Btech</span>
         </label>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-        >
-          Submit
-        </button>
+        <div className="flex space-x-2">
+          <button onClick={handleDownloadBat} className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Submit</button>
+        </div>
+
+        <p className="text-sm text-gray-500">
+          Sau khi tải về, vui lòng mở file .bat trên máy Windows (double-click hoặc chạy bằng cmd).
+        </p>
       </form>
     </div>
   );
